@@ -35,7 +35,7 @@ jobs:
             fit4110/camera-stream:lab04
 
       - name: Wait for service health
-        run: npx wait-on http://localhost:8000/health --timeout 30000
+        run: npx wait-on http-get://localhost:8000/health --timeout 30000
 
       - name: Run Newman against Docker container
         run: npm run test:local

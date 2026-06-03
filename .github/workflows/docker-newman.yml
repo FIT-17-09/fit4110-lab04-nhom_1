@@ -24,15 +24,15 @@ jobs:
         run: npm run lint:openapi
 
       - name: Build Docker image
-        run: docker build -t fit4110/iot-ingestion:lab04 .
+        run: docker build -t fit4110/camera-stream:lab04 .
 
       - name: Run Docker container
         run: |
           docker run -d --rm \
-            --name fit4110-iot-lab04 \
+            --name fit4110-camera-lab04 \
             -p 8000:8000 \
             --env-file .env.example \
-            fit4110/iot-ingestion:lab04
+            fit4110/camera-stream:lab04
 
       - name: Wait for service health
         run: npx wait-on http://localhost:8000/health --timeout 30000
@@ -42,11 +42,11 @@ jobs:
 
       - name: Show container logs on failure
         if: failure()
-        run: docker logs fit4110-iot-lab04 || true
+        run: docker logs fit4110-camera-lab04 || true
 
       - name: Stop container
         if: always()
-        run: docker stop fit4110-iot-lab04 || true
+        run: docker stop fit4110-camera-lab04 || true
 
       - name: Upload Newman reports
         if: always()

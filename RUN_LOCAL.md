@@ -8,7 +8,7 @@ Tài liệu này giúp người khác clone repo sạch và chạy lại service
 
 ```bash
 git clone <repo-url>
-cd FIT4110_lab04_docker_packaging
+cd fit4110-lab04-nhom_1
 ```
 
 ---
@@ -24,7 +24,7 @@ npm install
 ## 3. Build Docker image
 
 ```bash
-docker build -t fit4110/iot-ingestion:lab04 .
+docker build -t fit4110/camera-stream:lab04 .
 ```
 
 ---
@@ -33,10 +33,10 @@ docker build -t fit4110/iot-ingestion:lab04 .
 
 ```bash
 docker run --rm \
-  --name fit4110-iot-lab04 \
+  --name fit4110-camera-lab04 \
   -p 8000:8000 \
   --env-file .env.example \
-  fit4110/iot-ingestion:lab04
+  fit4110/camera-stream:lab04
 ```
 
 Mở terminal khác, kiểm tra:
@@ -50,7 +50,7 @@ Kết quả mong đợi:
 ```json
 {
   "status": "ok",
-  "service": "iot-ingestion",
+  "service": "camera-stream",
   "version": "0.4.0"
 }
 ```
@@ -77,7 +77,7 @@ reports/newman-lab04-local.html
 Nếu không dùng `--rm` hoặc container còn chạy:
 
 ```bash
-docker stop fit4110-iot-lab04
+docker stop fit4110-camera-lab04
 ```
 
 ---

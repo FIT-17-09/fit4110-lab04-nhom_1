@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "FIT4110 Lab04 IoT Docker Verification",
-    "description": "Postman collection aligned with Lab 03 contract style to verify the Dockerized IoT service in Lab 04.",
+    "name": "FIT4110 Lab04 Camera Stream Verification",
+    "description": "Postman collection to verify the Dockerized Camera Stream service in Lab 04.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -31,14 +31,14 @@
                 "exec": [
                   "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
                   "pm.test('Response has status ok', function () { const json = pm.response.json(); pm.expect(json.status).to.eql('ok'); });",
-                  "pm.test('Response has service name and version', function () { const json = pm.response.json(); pm.expect(json).to.have.property('service'); pm.expect(json).to.have.property('version'); });"
+                  "pm.test('Response has service name and version', function () { const json = pm.response.json(); pm.expect(json.service).to.eql('camera-stream'); pm.expect(json).to.have.property('version'); });"
                 ]
               }
             }
           ]
         },
         {
-          "name": "POST valid temperature reading returns 201",
+          "name": "POST register camera returns 201",
           "request": {
             "method": "POST",
             "header": [
@@ -52,17 +52,17 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/readings",
+              "raw": "{{baseUrl}}/cameras",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "readings"
+                "cameras"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"device_id\": \"ESP32-LAB-A01\",\n  \"metric\": \"temperature\",\n  \"value\": 31.5,\n  \"unit\": \"celsius\",\n  \"timestamp\": \"2026-05-13T08:30:00+07:00\"\n}"
+              "raw": "{\n  \"camera_id\": \"CAM-001\",\n  \"location\": \"Hallway-A\",\n  \"resolution\": \"1280x720\",\n  \"fps\": 30\n}"
             }
           },
           "event": [
@@ -72,17 +72,17 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
-                  "pm.test('Response follows created-reading schema', function () { const json = pm.response.json(); pm.expect(json).to.have.property('reading_id'); pm.expect(json.reading_id).to.match(/^R-[0-9]{8}-[0-9]{4}$/); pm.expect(json).to.have.property('accepted', true); pm.expect(json.metric).to.eql('temperature'); });",
-                  "pm.test('Response device_id matches request', function () { const json = pm.response.json(); pm.expect(json.device_id).to.eql('ESP32-LAB-A01'); });",
+                  "pm.test('Response follows camera info schema', function () { const json = pm.response.json(); pm.expect(json).to.have.property('camera_id'); pm.expect(json.camera_id).to.match(/^CAM-[0-9]{3}$/); pm.expect(json).to.have.property('status', 'active'); pm.expect(json.fps).to.eql(30); });",
+                  "pm.test('Response location matches request', function () { const json = pm.response.json(); pm.expect(json.location).to.eql('Hallway-A'); });",
                   "const created = pm.response.json();",
-                  "if (created.reading_id) { pm.environment.set('createdReadingId', created.reading_id); }"
+                  "if (created.camera_id) { pm.environment.set('createdCameraId', created.camera_id); }"
                 ]
               }
             }
           ]
         },
         {
-          "name": "GET latest readings returns items array",
+          "name": "GET cameras list returns array",
           "request": {
             "method": "GET",
             "header": [
@@ -92,23 +92,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/readings/latest?device_id=ESP32-LAB-A01&limit=5",
+              "raw": "{{baseUrl}}/cameras",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "readings",
-                "latest"
-              ],
-              "query": [
-                {
-                  "key": "device_id",
-                  "value": "ESP32-LAB-A01"
-                },
-                {
-                  "key": "limit",
-                  "value": "5"
-                }
+                "cameras"
               ]
             }
           },
@@ -119,14 +108,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
-                  "pm.test('Response has items array', function () { const json = pm.response.json(); pm.expect(json).to.have.property('items'); pm.expect(json.items).to.be.an('array'); });"
+                  "pm.test('Response is cameras array', function () { const json = pm.response.json(); pm.expect(json).to.be.an('array'); pm.expect(json.length).to.be.at.least(1); });"
                 ]
               }
             }
           ]
         },
         {
-          "name": "GET reading by saved reading_id returns 200",
+          "name": "GET camera details returns 200",
           "request": {
             "method": "GET",
             "header": [
@@ -136,13 +125,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/readings/{{createdReadingId}}",
+              "raw": "{{baseUrl}}/cameras/{{createdCameraId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "readings",
-                "{{createdReadingId}}"
+                "cameras",
+                "{{createdCameraId}}"
               ]
             }
           },
@@ -153,7 +142,42 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
-                  "pm.test('Response reading_id matches saved variable', function () { const json = pm.response.json(); const saved = pm.environment.get('createdReadingId'); pm.expect(json.reading_id).to.eql(saved); });"
+                  "pm.test('Response camera_id matches saved variable', function () { const json = pm.response.json(); const saved = pm.environment.get('createdCameraId'); pm.expect(json.camera_id).to.eql(saved); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET camera frame returns image/jpeg",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cameras/{{createdCameraId}}/frame",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cameras",
+                "{{createdCameraId}}",
+                "frame"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response content type is image/jpeg', function () { pm.response.to.have.header('Content-Type', 'image/jpeg'); });"
                 ]
               }
             }
@@ -165,7 +189,7 @@
       "name": "02_Auth",
       "item": [
         {
-          "name": "POST reading without token returns 401",
+          "name": "POST register camera without token returns 401",
           "request": {
             "method": "POST",
             "header": [
@@ -175,17 +199,17 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/readings",
+              "raw": "{{baseUrl}}/cameras",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "readings"
+                "cameras"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"device_id\": \"ESP32-LAB-A01\",\n  \"metric\": \"temperature\",\n  \"value\": 31.5,\n  \"unit\": \"celsius\",\n  \"timestamp\": \"2026-05-13T08:30:00+07:00\"\n}"
+              "raw": "{\n  \"camera_id\": \"CAM-001\",\n  \"location\": \"Hallway-A\",\n  \"resolution\": \"1280x720\",\n  \"fps\": 30\n}"
             }
           },
           "event": [
@@ -214,7 +238,7 @@
           ]
         },
         {
-          "name": "POST reading with wrong token returns 401",
+          "name": "POST register camera with wrong token returns 401",
           "request": {
             "method": "POST",
             "header": [
@@ -228,17 +252,17 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/readings",
+              "raw": "{{baseUrl}}/cameras",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "readings"
+                "cameras"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"device_id\": \"ESP32-LAB-A01\",\n  \"metric\": \"temperature\",\n  \"value\": 31.5,\n  \"unit\": \"celsius\",\n  \"timestamp\": \"2026-05-13T08:30:00+07:00\"\n}"
+              "raw": "{\n  \"camera_id\": \"CAM-001\",\n  \"location\": \"Hallway-A\",\n  \"resolution\": \"1280x720\",\n  \"fps\": 30\n}"
             }
           },
           "event": [
@@ -272,7 +296,7 @@
       "name": "03_Negative",
       "item": [
         {
-          "name": "POST reading missing device_id returns validation error",
+          "name": "POST register camera missing location returns validation error",
           "request": {
             "method": "POST",
             "header": [
@@ -286,17 +310,17 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/readings",
+              "raw": "{{baseUrl}}/cameras",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "readings"
+                "cameras"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"metric\": \"temperature\",\n  \"value\": 31.5,\n  \"unit\": \"celsius\",\n  \"timestamp\": \"2026-05-13T08:30:00+07:00\"\n}"
+              "raw": "{\n  \"camera_id\": \"CAM-001\",\n  \"resolution\": \"1280x720\",\n  \"fps\": 30\n}"
             }
           },
           "event": [
@@ -325,7 +349,7 @@
           ]
         },
         {
-          "name": "POST reading with value as string returns validation error",
+          "name": "POST register camera with invalid resolution returns validation error",
           "request": {
             "method": "POST",
             "header": [
@@ -339,17 +363,17 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/readings",
+              "raw": "{{baseUrl}}/cameras",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "readings"
+                "cameras"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"device_id\": \"ESP32-LAB-A01\",\n  \"metric\": \"temperature\",\n  \"value\": \"hot\",\n  \"unit\": \"celsius\",\n  \"timestamp\": \"2026-05-13T08:30:00+07:00\"\n}"
+              "raw": "{\n  \"camera_id\": \"CAM-001\",\n  \"location\": \"Hallway-A\",\n  \"resolution\": \"4K-UHD\",\n  \"fps\": 30\n}"
             }
           },
           "event": [
@@ -361,7 +385,7 @@
                   "if (pm.environment.get('env') === 'mock') {",
                   "  pm.test('Mock response is documented', function () { pm.expect([201, 400, 422]).to.include(pm.response.code); });",
                   "} else {",
-                  "  pm.test('Wrong data type returns 422', function () { pm.response.to.have.status(422); });",
+                  "  pm.test('Wrong value enum returns 422', function () { pm.response.to.have.status(422); });",
                   "  function assertProblemDetails() {",
                   "    const json = pm.response.json();",
                   "    pm.expect(json).to.have.property('type');",
@@ -383,7 +407,7 @@
       "name": "04_Boundary_Reliability",
       "item": [
         {
-          "name": "POST boundary temperature 80 is accepted with warning",
+          "name": "POST boundary fps 60 is accepted with warning",
           "request": {
             "method": "POST",
             "header": [
@@ -397,17 +421,17 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/readings",
+              "raw": "{{baseUrl}}/cameras",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "readings"
+                "cameras"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"device_id\": \"ESP32-LAB-A01\",\n  \"metric\": \"temperature\",\n  \"value\": 80,\n  \"unit\": \"celsius\",\n  \"timestamp\": \"2026-05-13T08:30:00+07:00\"\n}"
+              "raw": "{\n  \"camera_id\": \"CAM-002\",\n  \"location\": \"Hallway-B\",\n  \"resolution\": \"1920x1080\",\n  \"fps\": 60\n}"
             }
           },
           "event": [
@@ -416,9 +440,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Boundary value 80 returns 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Boundary value 60 returns 201', function () { pm.response.to.have.status(201); });",
                   "if (pm.environment.get('env') !== 'mock') {",
-                  "  pm.test('High temperature response includes warning header', function () { pm.expect(pm.response.headers.has('X-Warning')).to.eql(true); });",
+                  "  pm.test('Max FPS response includes warning header', function () { pm.expect(pm.response.headers.has('X-Warning')).to.eql(true); });",
                   "}"
                 ]
               }
@@ -426,7 +450,7 @@
           ]
         },
         {
-          "name": "POST boundary temperature 81 is rejected",
+          "name": "POST boundary fps 61 is rejected",
           "request": {
             "method": "POST",
             "header": [
@@ -440,17 +464,17 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/readings",
+              "raw": "{{baseUrl}}/cameras",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "readings"
+                "cameras"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"device_id\": \"ESP32-LAB-A01\",\n  \"metric\": \"temperature\",\n  \"value\": 81,\n  \"unit\": \"celsius\",\n  \"timestamp\": \"2026-05-13T08:30:00+07:00\"\n}"
+              "raw": "{\n  \"camera_id\": \"CAM-003\",\n  \"location\": \"Hallway-C\",\n  \"resolution\": \"1280x720\",\n  \"fps\": 61\n}"
             }
           },
           "event": [
@@ -462,7 +486,7 @@
                   "if (pm.environment.get('env') === 'mock') {",
                   "  pm.test('Mock response is documented', function () { pm.expect([201, 400, 422]).to.include(pm.response.code); });",
                   "} else {",
-                  "  pm.test('Boundary value 81 returns 422', function () { pm.response.to.have.status(422); });",
+                  "  pm.test('Boundary value 61 returns 422', function () { pm.response.to.have.status(422); });",
                   "  function assertProblemDetails() {",
                   "    const json = pm.response.json();",
                   "    pm.expect(json).to.have.property('type');",

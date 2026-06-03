@@ -1,0 +1,279 @@
+openapi: 3.1.0
+info:
+  title: FIT4110 Lab 04 - Camera Stream API
+  version: 0.4.0
+  description: |
+    Contract dùng cho Lab 04 Docker packaging của Camera Stream service.
+    Nhận đăng ký camera, lấy thông tin camera và xuất ảnh frame stream sử dụng opencv-python-headless.
+    FPS hợp lệ từ 1 đến 60.
+servers:
+  - url: http://localhost:8000
+    description: Local or Docker container service
+  - url: http://localhost:4010
+    description: Prism mock server
+tags:
+  - name: system
+    description: Health and runtime information
+  - name: cameras
+    description: Camera streaming and management
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      tags: [system]
+      operationId: getHealth
+      summary: Kiểm tra trạng thái service
+      description: Public health check dùng để kiểm tra container hoặc mock server đã sẵn sàng.
+      security: []
+      responses:
+        "200":
+          description: Service đang hoạt động
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              examples:
+                ok:
+                  value:
+                    status: ok
+                    service: camera-stream
+                    version: 0.4.0
+
+  /cameras:
+    get:
+      tags: [cameras]
+      operationId: listCameras
+      summary: Lấy danh sách camera
+      description: Lấy danh sách các camera đang hoạt động.
+      responses:
+        "200":
+          description: Danh sách camera
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CameraInfo"
+        "401":
+          description: Thiếu hoặc sai token
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+    post:
+      tags: [cameras]
+      operationId: registerCamera
+      summary: Đăng ký một camera mới
+      description: |
+        Đăng ký một camera stream mới trong hệ thống.
+        FPS hợp lệ từ 1 đến 60.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CameraRegister"
+            examples:
+              valid_camera:
+                value:
+                  camera_id: CAM-001
+                  location: Hallway-A
+                  resolution: 1280x720
+                  fps: 30
+              boundary_max_fps:
+                value:
+                  camera_id: CAM-002
+                  location: Hallway-B
+                  resolution: 1920x1080
+                  fps: 60
+      responses:
+        "201":
+          description: Đã đăng ký camera thành công
+          headers:
+            X-Warning:
+              description: Warning trả về khi chạm giới hạn FPS tối đa (>= 60).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CameraInfo"
+              examples:
+                created:
+                  value:
+                    camera_id: CAM-001
+                    location: Hallway-A
+                    resolution: 1280x720
+                    fps: 30
+                    status: active
+                    registered_at: "2026-06-03T11:42:00+07:00"
+        "401":
+          description: Thiếu hoặc sai token
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "422":
+          description: Request không hợp lệ
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /cameras/{camera_id}:
+    get:
+      tags: [cameras]
+      operationId: getCamera
+      summary: Lấy chi tiết camera
+      parameters:
+        - name: camera_id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^CAM-[0-9]{3}$"
+          example: CAM-001
+      responses:
+        "200":
+          description: Chi tiết camera
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CameraInfo"
+        "401":
+          description: Thiếu hoặc sai token
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "404":
+          description: Không tìm thấy camera
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /cameras/{camera_id}/frame:
+    get:
+      tags: [cameras]
+      operationId: getCameraFrame
+      summary: Lấy 1 ảnh frame tĩnh từ camera stream
+      description: Trả về file ảnh raw JPEG được sinh trực tiếp bằng OpenCV.
+      parameters:
+        - name: camera_id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^CAM-[0-9]{3}$"
+          example: CAM-001
+      responses:
+        "200":
+          description: Frame ảnh tĩnh
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Thiếu hoặc sai token
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "404":
+          description: Không tìm thấy camera
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: token
+
+  schemas:
+    ResolutionEnum:
+      type: string
+      enum: [640x480, 1280x720, 1920x1080]
+
+    CameraStatusEnum:
+      type: string
+      enum: [active, inactive]
+
+    CameraRegister:
+      type: object
+      required: [camera_id, location, fps]
+      properties:
+        camera_id:
+          type: string
+          pattern: "^CAM-[0-9]{3}$"
+          example: CAM-001
+        location:
+          type: string
+          minLength: 3
+          example: Hallway-A
+        resolution:
+          $ref: "#/components/schemas/ResolutionEnum"
+        fps:
+          type: integer
+          minimum: 1
+          maximum: 60
+          description: FPS của stream, kiểm thử từ 1 tới 60.
+          example: 30
+
+    CameraInfo:
+      allOf:
+        - $ref: "#/components/schemas/CameraRegister"
+        - type: object
+          required: [status, registered_at]
+          properties:
+            status:
+              $ref: "#/components/schemas/CameraStatusEnum"
+            registered_at:
+              type: string
+              format: date-time
+              example: "2026-06-03T11:42:00+07:00"
+
+    HealthResponse:
+      type: object
+      required: [status, service, version]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+          example: ok
+        service:
+          type: string
+          example: camera-stream
+        version:
+          type: string
+          example: 0.4.0
+
+    ProblemDetails:
+      type: object
+      required: [type, title, status, detail]
+      properties:
+        type:
+          type: string
+          example: https://smart-campus.local/problems/validation-error
+        title:
+          type: string
+          example: Validation error
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+          example: 422
+        detail:
+          type: string
+          example: body.fps must be less than or equal to 60
+        instance:
+          type: string
+          example: /cameras

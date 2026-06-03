@@ -130,6 +130,7 @@ paths:
       tags: [cameras]
       operationId: getCamera
       summary: Lấy chi tiết camera
+      description: Lấy thông tin chi tiết của một camera theo camera_id
       parameters:
         - name: camera_id
           in: path
